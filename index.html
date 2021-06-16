@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Recurly.js Example: Minimal Billing Information</title>
+    <script src="https://js.recurly.com/v4/recurly.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <script src="/config"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <link href="https://js.recurly.com/v4/recurly.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet" />
+    <link href="/style.css" rel="stylesheet" />
+    <style type="text/css">
+      main {
+        max-width: 30rem;
+      }
+
+      /* Apple Pay button styles */
+      @supports (-webkit-appearance: -apple-pay-button) {
+        .apple-pay-button {
+          display: inline-block;
+          -webkit-appearance: -apple-pay-button;
+        }
+        .apple-pay-button-black {
+          -apple-pay-button-style: black;
+        }
+        .apple-pay-button-white {
+          -apple-pay-button-style: white;
+        }
+
+        .apple-pay-button-white-with-line {
+          -apple-pay-button-style: white-outline;
+        }
+      }
+
+      @supports not (-webkit-appearance: -apple-pay-button) {
+        .apple-pay-button {
+          display: inline-block;
+          background-size: 100% 60%;
+          background-repeat: no-repeat;
+          background-position: 50% 50%;
+          border-radius: 5px;
+          padding: 0px;
+          box-sizing: border-box;
+          min-width: 200px;
+          min-height: 32px;
+          max-height: 64px;
+        }
+        .apple-pay-button-black {
+          background-image: -webkit-named-image(apple-pay-logo-white);
+          background-color: black;
+        }
+        .apple-pay-button-white {
+          background-image: -webkit-named-image(apple-pay-logo-black);
+          background-color: white;
+        }
+        .apple-pay-button-white-with-line {
+          background-image: -webkit-named-image(apple-pay-logo-black);
+          background-color: white;
+          border: .5px solid black;
+        }
+      }
+
+      .apple-pay-button-hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section>
+        <h1 class="logo">
+          <span class="price">$10</span>
+          <span class="term">monthly</span>
+        </h1>
+      </section>
+
+      <section id="errors"></section>
+
+      <section>
+        <form method="post" action="/api/subscriptions/new">
+          <div id="apple-pay" class="apple-pay-button apple-pay-button-white apple-pay-button-hidden"></div>
+          <input type="hidden" data-recurly="token" name="recurly-token">
+        </form>
+      </section>
+    </main>
+
+    <script>
+      // Configure recurly.js -- set this to your own public key
+      recurly.configure('ewr1-iXFKCZkT6tHGeORsOfqodA');
+
+      recurly.ready(function () {
+        var button = document.querySelector('#apple-pay')
+
+        // Check if the device is compatible with Apple Pay
+        if (!window.ApplePaySession) {
+          $('#errors').text('Your device or browser is not compatible with Apple Pay');
+          return;
+        }
+
+        var applePay = recurly.ApplePay({
+          country: 'US',
+          currency: 'USD',
+          label: "Apple pay via recurly",
+          total: '10'
+        });
+
+        applePay.ready(function () {
+          // Show the Apple Pay button
+          button.className = button.className.replace('apple-pay-button-hidden', '');
+
+          button.addEventListener('click', initListener);
+          button.addEventListener('touch', initListener);
+
+          function initListener () {
+            // Reset the errors display
+            $('#errors').text('');
+            applePay.begin();
+          }
+        });
+
+        applePay.on('error', function (err) {
+          console.error('Apple Pay error', err);
+        });
+
+        applePay.on('token', function (token) {
+          // send any errors to the error function below
+          if (err) error(err);
+          // Otherwise we continue with the form submission
+          else document.querySelector('form').submit();
+        });
+      });
+
+      // A simple error handling function to expose errors to the customer
+      function error (err) {
+        $('#errors').text('The following fields appear to be invalid: ' + err.fields.join(', '));
+        $('button').prop('disabled', false);
+        $.each(err.fields, function (i, field) {
+          $('[data-recurly=' + field + ']').addClass('error');
+        });
+      }
+
+      // runs some simple animations for the page
+      $('body').addClass('show');
+    </script>
+  </body>
+</html>
